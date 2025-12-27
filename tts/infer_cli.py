@@ -19,8 +19,14 @@ import librosa
 import numpy as np
 import torch
 
-from tn.chinese.normalizer import Normalizer as ZhNormalizer
-from tn.english.normalizer import Normalizer as EnNormalizer
+# from tn.chinese.normalizer import Normalizer as ZhNormalizer
+# from tn.english.normalizer import Normalizer as EnNormalizer
+class DummyNormalizer:
+    def __init__(self, *args, **kwargs): pass
+    def normalize(self, text): return text
+
+ZhNormalizer = DummyNormalizer
+EnNormalizer = DummyNormalizer
 from langdetect import detect as classify_language
 from pydub import AudioSegment
 import pyloudnorm as pyln
@@ -37,6 +43,8 @@ from tts.utils.commons.hparams import hparams, set_hparams
 
 if "TOKENIZERS_PARALLELISM" not in os.environ:
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
+if "HF_HUB_OFFLINE" not in os.environ:
+    os.environ["HF_HUB_OFFLINE"] = "1"
 
 def convert_to_wav(wav_path):
     # Check if the file exists
@@ -108,7 +116,7 @@ class MegaTTS3DiTInfer():
         ''' Load Duration LM '''
         from tts.modules.ar_dur.ar_dur_predictor import ARDurPredictor
         hp_dur_model = self.hp_dur_model = set_hparams(f'{self.dur_exp_name}/config.yaml', global_hparams=False)
-        hp_dur_model['frames_multiple'] = hparams['frames_multiple']
+        hp_dur_model['frames_multiple'] = hparams.get('frames_multiple', 8)  # Default value 8
         self.dur_model = ARDurPredictor(
             hp_dur_model, hp_dur_model['dur_txt_hs'], hp_dur_model['dur_model_hidden_size'],
             hp_dur_model['dur_model_layers'], ph_dict_size,
@@ -139,9 +147,24 @@ class MegaTTS3DiTInfer():
 
         ''' Load G2P LM'''
         from transformers import AutoTokenizer, AutoModelForCausalLM
-        g2p_tokenizer = AutoTokenizer.from_pretrained(self.g2p_exp_name, padding_side="right")
+        g2p_tokenizer = AutoTokenizer.from_pretrained(
+            self.g2p_exp_name, 
+            padding_side="right",
+            local_files_only=True,
+            trust_remote_code=False
+        )
         g2p_tokenizer.padding_side = "right"
-        self.g2p_model = AutoModelForCausalLM.from_pretrained(self.g2p_exp_name).eval().to(device)
+        # Set pad_token to avoid attention mask warnings
+        if g2p_tokenizer.pad_token is None:
+            g2p_tokenizer.pad_token = g2p_tokenizer.eos_token
+        self.g2p_model = AutoModelForCausalLM.from_pretrained(
+            self.g2p_exp_name,
+            local_files_only=True,
+            pad_token_id=g2p_tokenizer.eos_token_id,
+            trust_remote_code=False
+        ).eval().to(device)
+        # Set model config pad_token_id
+        self.g2p_model.config.pad_token_id = g2p_tokenizer.pad_token_id
         self.g2p_tokenizer = g2p_tokenizer
         self.speech_start_idx = g2p_tokenizer.encode('<Reserved_TTS_0>')[0]
 
@@ -229,7 +252,7 @@ class MegaTTS3DiTInfer():
                 
                 inputs = prepare_inputs_for_dit(self, mel2ph_ref, mel2ph_pred, ph_ref, tone_ref, ph_pred, tone_pred, vae_latent)
                 # Speech dit inference
-                with torch.cuda.amp.autocast(dtype=self.precision, enabled=True):
+                with torch.amp.autocast(device_type=self.device, dtype=self.precision, enabled=True):
                     x = self.dit.inference(inputs, timesteps=time_step, seq_cfg_w=[p_w, t_w]).float()
                 
                 # WavVAE decode
