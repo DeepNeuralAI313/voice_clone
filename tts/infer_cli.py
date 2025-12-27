@@ -69,7 +69,7 @@ def cut_wav(wav_path, max_len=28):
     audio = audio[:int(max_len * 1000)]
     audio.export(wav_path, format="wav")
 
-class MegaTTS3DiTInfer():
+class Voice_cloning_model():
     def __init__(
             self, 
             device=None,
@@ -287,7 +287,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     wav_path, input_text, out_path, time_step, p_w, t_w = args.input_wav, args.input_text, args.output_dir, args.time_step, args.p_w, args.t_w
 
-    infer_ins = MegaTTS3DiTInfer()
+    infer_ins = Voice_cloning_model()
 
     with open(wav_path, 'rb') as file:
         file_content = file.read()
