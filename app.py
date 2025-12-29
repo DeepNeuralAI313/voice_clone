@@ -167,181 +167,79 @@ def preprocess_audio_robust(audio_path, target_sr=22050, max_duration=30):
         raise ValueError(f"Failed to process audio: {str(e)}")
 
 
-# Custom CSS for better styling
-custom_css = """
-.header-container {
-    text-align: center;
-    padding: 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 10px;
-    margin-bottom: 20px;
-    color: white;
-}
-.info-box {
-    background-color: #f0f4f8;
-    padding: 15px;
-    border-radius: 8px;
-    border-left: 4px solid #667eea;
-    margin: 10px 0;
-}
-.warning-box {
-    background-color: #fff3cd;
-    padding: 15px;
-    border-radius: 8px;
-    border-left: 4px solid #ffc107;
-    margin: 10px 0;
-}
-footer {visibility: hidden}
-"""
+with gr.Blocks(title="DeepNeuralAI Voice Cloning") as demo:
+    gr.Markdown("# DeepNeuralAI Voice Cloning")
+    
+    gr.Markdown(
+        "from text using a short reference audio sample. The system captures the speaker’s tone, pitch, "
+        "and speaking style to produce personalized voice outputs."
+    )
+    
+    gr.Markdown(
+        "Our solution is designed for practical use cases such as personalized assistants, content creation, "
+        "audiobooks, customer support automation, accessibility tools, and research applications."
+    )
+    
+    gr.Markdown(
+        "While the generated voice closely resembles the reference speaker, results may vary depending on "
+        "audio quality, accent, and speaking clarity. We recommend testing multiple samples for best results."
+    )
+    
+    gr.Markdown(
+        "**Important Notice:** Please use this technology responsibly. Voice cloning should only be performed "
+        "with proper consent. This demo is provided strictly for educational, research, and authorized use cases."
+    )
+    
+    gr.Markdown(
+        "Upload a short reference audio clip and enter the text you want to convert into speech using the same voice."
+    )
 
-with gr.Blocks(title="🎙️ DeepNeuralAI Voice Cloning", theme=gr.themes.Soft(), css=custom_css) as demo:
-    
-    # Header Section
     with gr.Row():
         with gr.Column():
-            gr.HTML("""
-                <div class="header-container">
-                    <h1 style="margin: 0; font-size: 2.5em;">🎙️ DeepNeuralAI Voice Cloning</h1>
-                    <p style="margin: 10px 0 0 0; font-size: 1.1em; opacity: 0.9;">Advanced AI-Powered Voice Synthesis with MegaTTS3</p>
-                </div>
-            """)
-    
-    # About Section
-    with gr.Row():
-        with gr.Column():
-            gr.Markdown("""
-            ### 🎯 What is Voice Cloning?
-            
-            Clone any voice from text using a short reference audio sample. Our advanced AI system captures the speaker's **tone**, **pitch**, 
-            and **speaking style** to produce highly personalized voice outputs.
-            
-            ### 💡 Use Cases
-            
-            - 🤖 **Personalized Assistants** - Create custom voice assistants
-            - 🎨 **Content Creation** - Generate voiceovers for videos and podcasts
-            - 📚 **Audiobooks** - Convert written content to spoken audio
-            - 📞 **Customer Support** - Automated voice responses
-            - ♿ **Accessibility Tools** - Assistive technologies for the disabled
-            - 🔬 **Research Applications** - Academic and scientific studies
-            """)
-    
-    # Important Notice
-    with gr.Row():
-        with gr.Column():
-            gr.Markdown("""
-            ### ⚠️ Important Ethical Notice
-            
-            Please use this technology **responsibly**. Voice cloning should only be performed with **proper consent** from the original speaker. 
-            This demo is provided strictly for **educational**, **research**, and **authorized use cases**. Misuse of voice cloning technology 
-            may violate privacy laws and ethical guidelines.
-            """)
-    
-    gr.Markdown("---")
-    
-    # Main Interface
-    gr.Markdown("### 🚀 Get Started")
-    gr.Markdown("Upload a reference audio clip (3-30 seconds recommended) and enter the text you want to generate in the cloned voice.")
-    
-    with gr.Row(equal_height=True):
-        with gr.Column(scale=1):
-            gr.Markdown("#### 📤 Input Section")
             reference_audio = gr.Audio(
-                label="🎵 Reference Audio (3-30 seconds recommended)",
+                label="Reference Audio",
                 type="filepath",
                 sources=["upload", "microphone"]
             )
             text_input = gr.Textbox(
-                label="📝 Text to Generate",
-                placeholder="Enter the text you want to synthesize in the cloned voice...",
-                lines=5,
-                info="Type or paste the text you want to convert to speech"
+                label="Text to Generate",
+                placeholder="Enter the text you want to synthesize...",
+                lines=3
             )
             
-            with gr.Accordion("⚙️ Advanced Settings", open=False):
-                gr.Markdown("*Fine-tune the generation parameters for optimal results*")
-                infer_timestep = gr.Slider(
-                    label="🔢 Inference Timesteps",
+            with gr.Accordion("Advanced Options", open=False):
+                infer_timestep = gr.Number(
+                    label="Inference Timesteps",
                     value=32,
                     minimum=1,
                     maximum=100,
-                    step=1,
-                    info="Higher values = better quality but slower (recommended: 32-50)"
+                    step=1
                 )
-                p_w = gr.Slider(
-                    label="🎯 Intelligibility Weight",
+                p_w = gr.Number(
+                    label="Intelligibility Weight",
                     value=1.4,
                     minimum=0.1,
                     maximum=5.0,
-                    step=0.1,
-                    info="Controls clarity and pronunciation (recommended: 1.0-2.0)"
+                    step=0.1
                 )
-                t_w = gr.Slider(
-                    label="🔊 Similarity Weight", 
+                t_w = gr.Number(
+                    label="Similarity Weight", 
                     value=3.0,
                     minimum=0.1,
                     maximum=10.0,
-                    step=0.1,
-                    info="Controls voice similarity to reference (recommended: 2.0-4.0)"
+                    step=0.1
                 )
             
-            generate_btn = gr.Button(
-                "🎬 Generate Speech", 
-                variant="primary", 
-                size="lg",
-                scale=1
-            )
+            generate_btn = gr.Button("Generate Speech", variant="primary")
         
-        with gr.Column(scale=1):
-            gr.Markdown("#### 🎧 Output Section")
-            output_audio = gr.Audio(
-                label="✨ Generated Audio",
-                interactive=False
-            )
-            
-            with gr.Accordion("💡 Tips for Best Results", open=True):
-                gr.Markdown("""
-                - ✅ Use **clear, high-quality** reference audio
-                - ✅ Keep reference audio between **3-30 seconds**
-                - ✅ Ensure **minimal background noise**
-                - ✅ Use audio with **consistent speaking style**
-                - ✅ Test with **different parameter settings**
-                - ❌ Avoid extremely short clips (< 2 seconds)
-                - ❌ Avoid low-quality or heavily compressed audio
-                """)
-    
-    gr.Markdown("---")
-    
-    # Examples Section
-    with gr.Row():
         with gr.Column():
-            gr.Markdown("### 📋 Quick Start Examples")
-            gr.Examples(
-                examples=[
-                    [None, "Hello, welcome to DeepNeuralAI voice cloning. This technology can transform any text into speech using your voice.", 32, 1.4, 3.0],
-                    [None, "Artificial intelligence is revolutionizing the way we interact with technology and opening new possibilities every day.", 40, 1.5, 3.5],
-                    [None, "The quick brown fox jumps over the lazy dog. This sentence contains every letter of the alphabet.", 32, 1.4, 3.0],
-                ],
-                inputs=[reference_audio, text_input, infer_timestep, p_w, t_w],
-                label="Click to load example text"
-            )
+            output_audio = gr.Audio(label="Generated Audio")
     
-    # Footer
-    gr.Markdown("""
-    ---
-    <div style="text-align: center; opacity: 0.7; padding: 20px;">
-        <p>Powered by <strong>MegaTTS3</strong> | Built with ❤️ by DeepNeuralAI</p>
-        <p style="font-size: 0.9em;">For research and educational purposes only</p>
-    </div>
-    """)
-    
-    # Event handler
     generate_btn.click(
         fn=generate_speech,
         inputs=[reference_audio, text_input, infer_timestep, p_w, t_w],
-        outputs=[output_audio],
-        api_name="generate"
+        outputs=[output_audio]
     )
 
 if __name__ == '__main__':
     demo.launch(server_name='0.0.0.0', server_port=7860, debug=True)
-
