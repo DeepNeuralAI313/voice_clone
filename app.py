@@ -199,7 +199,7 @@ def preprocess_audio_robust(audio_path, target_sr=22050, max_duration=30):
         raise ValueError(f"Failed to process audio: {str(e)}")
 
 
-with gr.Blocks(title="DeepNeuralAI Voice Cloning", theme=gr.themes.Default(primary_hue="indigo", neutral_hue="slate")) as demo:
+with gr.Blocks(title="DeepNeuralAI Voice Cloning", theme=gr.themes.Base()) as demo:
     gr.Markdown("# DeepNeuralAI Voice Cloning")
     
 
