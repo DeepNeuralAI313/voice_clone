@@ -1,4 +1,4 @@
-
+import spaces
 import torch
 import os
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
@@ -18,7 +18,17 @@ def download_weights():
     repo_id = "mrfakename/MegaTTS3-VoiceCloning"
     weights_dir = "checkpoints"
     
-    if not os.path.exists(weights_dir):
+    # Check if critical config files exist
+    critical_files = [
+        "checkpoints/duration_lm/config.yaml",
+        "checkpoints/aligner_lm/config.yaml",
+        "checkpoints/diffusion_transformer/config.yaml",
+        "checkpoints/wavvae/config.yaml"
+    ]
+    
+    needs_download = not os.path.exists(weights_dir) or not all(os.path.exists(f) for f in critical_files)
+    
+    if needs_download:
         print("Downloading model weights from HuggingFace...")
         snapshot_download(
             repo_id=repo_id,
@@ -26,6 +36,16 @@ def download_weights():
             local_dir_use_symlinks=False
         )
         print("Model weights downloaded successfully!")
+        
+        # Verify download
+        missing_files = [f for f in critical_files if not os.path.exists(f)]
+        if missing_files:
+            print(f"Warning: Missing critical files after download: {missing_files}")
+            print(f"Contents of checkpoints directory:")
+            if os.path.exists(weights_dir):
+                for root, dirs, files in os.walk(weights_dir):
+                    for file in files[:20]:  # Show first 20 files
+                        print(f"  {os.path.join(root, file)}")
     else:
         print("Model weights already exist.")
     
@@ -33,10 +53,22 @@ def download_weights():
 
 
 # Download weights and initialize model
-download_weights()
+weights_dir = download_weights()
+
+# Verify critical paths exist before initializing model
+print(f"Working directory: {os.getcwd()}")
+print(f"Checkpoints exist: {os.path.exists('checkpoints')}")
+if os.path.exists('checkpoints'):
+    print(f"Checkpoints contents: {os.listdir('checkpoints')}")
+
 print("Initializing MegaTTS3 model...")
-infer_pipe = Voice_cloning_model()
-print("Model loaded successfully!")
+try:
+    infer_pipe = Voice_cloning_model()
+    print("Model loaded successfully!")
+except Exception as e:
+    print(f"Error loading model: {e}")
+    print("Please ensure all checkpoint files are properly downloaded.")
+    raise
 
 def reset_model():
     """Reset the inference pipeline to recover from CUDA errors."""
@@ -53,7 +85,7 @@ def reset_model():
         print(f"Failed to reinitialize model: {e}")
         return False
 
-
+@spaces.GPU
 def generate_speech(inp_audio, inp_text, infer_timestep, p_w, t_w):
     if not inp_audio or not inp_text:
         gr.Warning("Please provide both reference audio and text to generate.")
@@ -167,32 +199,9 @@ def preprocess_audio_robust(audio_path, target_sr=22050, max_duration=30):
         raise ValueError(f"Failed to process audio: {str(e)}")
 
 
-with gr.Blocks(title="DeepNeuralAI Voice Cloning") as demo:
+with gr.Blocks(title="DeepNeuralAI Voice Cloning", theme=gr.themes.Default(primary_hue="indigo", neutral_hue="slate")) as demo:
     gr.Markdown("# DeepNeuralAI Voice Cloning")
     
-    gr.Markdown(
-        "from text using a short reference audio sample. The system captures the speaker’s tone, pitch, "
-        "and speaking style to produce personalized voice outputs."
-    )
-    
-    gr.Markdown(
-        "Our solution is designed for practical use cases such as personalized assistants, content creation, "
-        "audiobooks, customer support automation, accessibility tools, and research applications."
-    )
-    
-    gr.Markdown(
-        "While the generated voice closely resembles the reference speaker, results may vary depending on "
-        "audio quality, accent, and speaking clarity. We recommend testing multiple samples for best results."
-    )
-    
-    gr.Markdown(
-        "**Important Notice:** Please use this technology responsibly. Voice cloning should only be performed "
-        "with proper consent. This demo is provided strictly for educational, research, and authorized use cases."
-    )
-    
-    gr.Markdown(
-        "Upload a short reference audio clip and enter the text you want to convert into speech using the same voice."
-    )
 
     with gr.Row():
         with gr.Column():
